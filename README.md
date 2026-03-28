@@ -34,7 +34,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/YourUsername/clothing-ai.git](https://github.com/YourUsername/clothing-ai.git)
+    git clone [https://github.com/SadeesaDamruwan/Cloathing_Ai.git](https://github.com/SadeesaDamruwan/Cloathing_Ai.git)
     cd clothing-ai
     ```
 
@@ -73,5 +73,5 @@ Follow these instructions to get a copy of the project up and running on your lo
 **Sadeesa Damruwan (Kakashi_EvoX)**
 Software Engineering undergraduate at NSBM Green University and founder of Technova Solutions. Passionate about cross-platform mobile development, clean code architecture, and integrating AI to solve real-world problems. When I'm not coding, I'm usually building PCs, hitting the gym, or playing Rainbow Six Siege.
 
-* [GitHub](https://github.com/YourUsername)
-* [LinkedIn](https://linkedin.com/in/YourProfile)
+* [GitHub](https://github.com/SadeesaDamruwan)
+* [LinkedIn](https://www.linkedin.com/in/sadeesa-damruwan/)
