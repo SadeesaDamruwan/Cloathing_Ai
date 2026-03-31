@@ -1,3 +1,4 @@
+import 'package:assignment/presentation/WelcomeScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,9 +12,13 @@ import 'package:assignment/presentation/main_navigation.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-
-  if (Firebase.apps.isEmpty) {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    // Already initialized — safe to ignore
+    debugPrint('Firebase already initialized: $e');
   }
 
   runApp(const MyApp());
@@ -28,7 +33,6 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'Avenir',
         scaffoldBackgroundColor: const Color(0xFFE0E5EC),
       ),
       home: const AuthGate(),
@@ -51,7 +55,7 @@ class AuthGate extends StatelessWidget {
         }
 
         if (!authSnapshot.hasData) {
-          return const AuthScreen();
+          return const WelcomeScreen();
         }
 
         return FutureBuilder<bool>(

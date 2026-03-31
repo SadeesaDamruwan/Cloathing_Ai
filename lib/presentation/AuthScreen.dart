@@ -3,6 +3,9 @@ import 'package:assignment/data/services/auth_service.dart';
 import 'package:assignment/presentation/widgets/neumorphic_container.dart';
 import '../data/services/auth_state.dart';
 
+// 👇 1. Import main.dart so we can access the AuthGate
+import 'package:assignment/main.dart';
+
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
   @override
@@ -15,8 +18,13 @@ class _AuthScreenState extends State<AuthScreen> {
   final _authService = AuthService();
   bool _isLoading = false;
 
-  void _showError(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _showError(String msg) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
+  }
 
+  // --- Email Submit ---
   Future<void> _submit() async {
     if (_identifierController.text.isEmpty || _passwordController.text.isEmpty) {
       _showError("Please fill in all fields");
@@ -29,10 +37,60 @@ class _AuthScreenState extends State<AuthScreen> {
       } else {
         await _authService.signUpWithEmail(_identifierController.text, _passwordController.text);
       }
-      // AuthGate in main.dart will automatically redirect now
+
+      // 👇 2. Manually trigger the AuthGate on success
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+              (route) => false,
+        );
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
       _showError(e.toString());
+    }
+  }
+
+  // --- Google Sign In ---
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await _authService.signInWithGoogle();
+
+      if (user != null && mounted) {
+        // 👇 3. Manually trigger the AuthGate on success
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+              (route) => false,
+        );
+      } else if (mounted) {
+        // If they closed the Google popup without signing in
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+      _showError("Google Sign-In Failed: $e");
+    }
+  }
+
+  // --- Apple Sign In ---
+  Future<void> _handleAppleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await _authService.signInWithApple();
+
+      if (user != null && mounted) {
+        // 👇 4. Manually trigger the AuthGate on success
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+              (route) => false,
+        );
+      } else if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+      _showError("Apple Sign-In Failed: $e");
     }
   }
 
@@ -41,7 +99,7 @@ class _AuthScreenState extends State<AuthScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFE0E5EC),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Colors.black))
           : SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -60,6 +118,7 @@ class _AuthScreenState extends State<AuthScreen> {
             const SizedBox(height: 40),
             _buildSubmitButton(),
             const SizedBox(height: 40),
+
             _buildSocialRow(),
           ],
         ),
@@ -69,7 +128,6 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Widget _buildInput(TextEditingController ctrl, String hint, IconData icon, {bool isPass = false}) {
     return NeumorphicContainer(
-      // We can add a custom 'isPressed' boolean to our widget if we want inner shadows
       child: TextField(
         controller: ctrl,
         obscureText: isPass,
@@ -98,9 +156,23 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget _buildSocialRow() {
     return Row(
       children: [
-        Expanded(child: NeumorphicContainer(child: IconButton(onPressed: () {}, icon: const Icon(Icons.g_mobiledata, size: 40)))),
+        Expanded(
+            child: NeumorphicContainer(
+                child: IconButton(
+                    onPressed: _handleGoogleSignIn,
+                    icon: const Icon(Icons.g_mobiledata, size: 40)
+                )
+            )
+        ),
         const SizedBox(width: 20),
-        Expanded(child: NeumorphicContainer(child: IconButton(onPressed: () {}, icon: const Icon(Icons.apple, size: 40)))),
+        Expanded(
+            child: NeumorphicContainer(
+                child: IconButton(
+                    onPressed: _handleAppleSignIn,
+                    icon: const Icon(Icons.apple, size: 40)
+                )
+            )
+        ),
       ],
     );
   }

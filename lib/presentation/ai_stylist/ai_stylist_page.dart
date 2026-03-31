@@ -7,12 +7,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// Import our Professional Layers
 import 'package:assignment/data/services/database_service.dart';
 import 'package:assignment/data/services/ai_service.dart';
 import 'package:assignment/presentation/widgets/neumorphic_container.dart';
 
-// Global memory persists across tabs
 List<Map<String, dynamic>> _globalChatMessages = [];
 List<Map<String, String>> _globalAiMemory = [];
 
@@ -34,17 +32,23 @@ class _AiStylistPageState extends State<AiStylistPage> {
   bool _loading = false;
   bool _isListening = false;
   bool _isTtsEnabled = false;
+  String _userName = "there";
 
   @override
   void initState() {
     super.initState();
     _initSpeech();
+
+    // Set the initial greeting placeholder
     if (_globalChatMessages.isEmpty) {
       _globalChatMessages.add({
         "role": "ai",
-        "text": "Hey! I'm your Ai-powered Stylist. Ask me for an outfit! (Try asking: 'What should I wear for the weather outside?' or 'Find me a red striped polo shirt')"
+        "text": "Hey there! I'm your Ai-powered Stylist. Ask me for an outfit!')"
       });
     }
+
+    // Fetch the actual username and update the greeting
+    _fetchUserName();
     _scrollToBottom();
   }
 
@@ -52,6 +56,27 @@ class _AiStylistPageState extends State<AiStylistPage> {
   void dispose() {
     _flutterTts.stop();
     super.dispose();
+  }
+
+  Future<void> _fetchUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await _dbService.getUserProfile(user.uid);
+        if (doc.exists && doc.data() != null) {
+          if (mounted) {
+            setState(() {
+              _userName = doc.data()!['username'] ?? "there";
+              if (_globalChatMessages.isNotEmpty && _globalChatMessages[0]["role"] == "ai") {
+                _globalChatMessages[0]["text"] = "Hey $_userName! I'm your Ai-powered Stylist. Ask me for an outfit!";
+              }
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint("Error fetching username: $e");
+      }
+    }
   }
 
   void _initSpeech() async {
@@ -147,7 +172,6 @@ class _AiStylistPageState extends State<AiStylistPage> {
       final base64Image = base64Encode(await imageFile.readAsBytes());
       final user = FirebaseAuth.instance.currentUser;
 
-      // Clean Professional Call
       await _dbService.saveCustomClosetItem(user!.uid, name, category, base64Image);
 
       setState(() {
@@ -175,7 +199,7 @@ class _AiStylistPageState extends State<AiStylistPage> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      final doc = await _dbService.getUserProfile(user!.uid); // Using our Database Service!
+      final doc = await _dbService.getUserProfile(user!.uid);
 
       String closetItems = "No clothes added yet";
       if (doc.exists && doc.data() != null) {
@@ -189,7 +213,6 @@ class _AiStylistPageState extends State<AiStylistPage> {
         if (tempInfo != null) weatherCtx = "\n\nCRITICAL CONTEXT: $tempInfo Suggest an outfit for this temperature.";
       }
 
-      // Clean Professional Call
       final aiResponse = await _aiService.getAiResponse(
           query: query, closetItems: closetItems, weatherContext: weatherCtx, memory: _globalAiMemory
       );
@@ -302,9 +325,46 @@ class _AiStylistPageState extends State<AiStylistPage> {
       height: 180,
       margin: const EdgeInsets.only(top: 15),
       child: ListView.builder(
-          scrollDirection: Axis.horizontal, itemCount: results.length,
+          scrollDirection: Axis.horizontal,
+          itemCount: results.length,
           itemBuilder: (ctx, index) {
             final item = results[index];
+            final String rawUrl = item["imageUrl"] ?? "";
+
+            Widget imageToDisplay;
+
+            // 1. Is it empty?
+            if (rawUrl.isEmpty) {
+              imageToDisplay = Container(color: Colors.grey[100], child: const Center(child: Icon(Icons.shopping_bag, color: Colors.grey, size: 30)));
+            }
+            // 2. Is it a Base64 raw image string? (Google Shopping does this a lot!)
+            else if (rawUrl.startsWith("data:image")) {
+              try {
+                final base64String = rawUrl.split(',').last;
+                imageToDisplay = Image.memory(
+                  base64Decode(base64String),
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder: (c, e, s) => Container(color: Colors.grey[100], child: const Center(child: Icon(Icons.image_not_supported, color: Colors.grey, size: 30))),
+                );
+              } catch (e) {
+                imageToDisplay = Container(color: Colors.grey[100], child: const Center(child: Icon(Icons.image_not_supported, color: Colors.grey, size: 30)));
+              }
+            }
+            // 3. Is it a normal Web Link?
+            else {
+              String safeUrl = rawUrl;
+              if (safeUrl.startsWith("//")) safeUrl = "https:$safeUrl";
+              else if (safeUrl.startsWith("http://")) safeUrl = safeUrl.replaceFirst("http://", "https://");
+
+              imageToDisplay = Image.network(
+                safeUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                errorBuilder: (c, e, s) => Container(color: Colors.grey[100], child: const Center(child: Icon(Icons.image_not_supported, color: Colors.grey, size: 30))),
+              );
+            }
+
             return GestureDetector(
               onTap: () { if (item["link"] != null) _launchURL(item["link"]); },
               child: Container(
@@ -314,8 +374,17 @@ class _AiStylistPageState extends State<AiStylistPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: item["imageUrl"] != null && item["imageUrl"]!.isNotEmpty ? Image.network(item["imageUrl"]!.startsWith("//") ? "https:${item["imageUrl"]}" : item["imageUrl"], fit: BoxFit.cover, width: double.infinity) : Container(color: Colors.grey[200], child: const Center(child: Icon(Icons.shopping_bag)))),
-                    Padding(padding: const EdgeInsets.all(8.0), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text(item["price"]!, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)), Text(item["title"]!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, height: 1.2)) ]))
+                    Expanded(child: imageToDisplay),
+                    Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item["price"] ?? "", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                              Text(item["title"] ?? "Item", maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, height: 1.2))
+                            ]
+                        )
+                    )
                   ],
                 ),
               ),
@@ -339,7 +408,7 @@ class _AiStylistPageState extends State<AiStylistPage> {
             child: const NeumorphicContainer(child: Padding(padding: EdgeInsets.all(12), child: Icon(Icons.add, size: 26))),
           ),
           const SizedBox(width: 10),
-          Expanded(child: NeumorphicContainer(isInner: true, child: TextField(controller: _ctrl, onSubmitted: (_) => _askAi(), decoration: const InputDecoration(border: InputBorder.none, hintText: "Ask Cerebras...", contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 14))))),
+          Expanded(child: NeumorphicContainer(isInner: true, child: TextField(controller: _ctrl, onSubmitted: (_) => _askAi(), decoration: const InputDecoration(border: InputBorder.none, hintText: "Ask Clothing Ai....", contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 14))))),
           IconButton(icon: const Icon(Icons.send), onPressed: _askAi),
         ],
       ),

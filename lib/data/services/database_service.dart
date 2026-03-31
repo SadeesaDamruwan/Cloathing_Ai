@@ -6,9 +6,11 @@ class DatabaseService {
 
   Future<bool> isProfileSetupComplete(String uid) async {
     try {
-      final doc = await _db.collection('user_closets').doc(uid).get(
-        const GetOptions(source: Source.serverAndCache),
-      );
+      final doc = await _db
+      .collection('user_closets')
+      .doc(uid)
+      .get(const GetOptions(source: Source.serverAndCache))
+      .timeout(const Duration(seconds: 10));
 
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;

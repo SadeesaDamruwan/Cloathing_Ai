@@ -21,7 +21,7 @@ class _CommunityPageState extends State<CommunityPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("fitted", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 26, color: Colors.black)),
+        title: const Text("Feed ", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 26, color: Colors.black)),
       ),
       body: Column(
         children: [
