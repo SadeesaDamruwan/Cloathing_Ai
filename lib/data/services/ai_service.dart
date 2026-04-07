@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 
 class AiService {
-  final String _cerebrasKey = "YOUR_CEREBRAS_API_KEY";
-  final String _serperKey = "YOUR_SERPER_API_KEY";
+  final String _cerebrasKey = "csk-8ehye2mhvt89xck486xptkh4fk84nr5ch34th5yd9yymhxcx";
+  final String _serperKey = "5e1c68175883f3deff523d728c70be67ee58ee9a";
 
   // --- 1. Weather API ---
   Future<String?> getLocalWeather() async {

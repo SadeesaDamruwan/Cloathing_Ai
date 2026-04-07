@@ -15,7 +15,7 @@ class PostModel {
     required this.username,
   });
 
-  // Professionals use this to convert Firestore data into a Post object
+
   factory PostModel.fromFirestore(Map<String, dynamic> data, String id) {
     return PostModel(
       id: id,
